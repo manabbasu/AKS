@@ -1,0 +1,16 @@
+Soln-> Right Click->Open in terminal
+docker images
+docker ps =See the runnig container
+docker stop <container ID>
+Select Release-Docker to build the latest image
+
+
+
+docker run -d -p 8080:80 --name myapp shoppingClient = To create the container
+
+docker start/stop
+pull
+push
+
+docker tag <imageid> manabranjanbasu/shoppingapp => It will create a new image name manabranjanbasu/shoppingapp locally, before that create a repo in dockerhub.com manabranjanbasu/shoppingapp
+docker push manabranjanbasu/shoppingapp:latest =>push the code to docker hub
