@@ -14,3 +14,8 @@ push
 
 docker tag <imageid> manabranjanbasu/shoppingapp => It will create a new image name manabranjanbasu/shoppingapp locally, before that create a repo in dockerhub.com manabranjanbasu/shoppingapp
 docker push manabranjanbasu/shoppingapp:latest =>push the code to docker hub
+
+docker pull mongo =>To download mongo image
+docker run -d -p 27017:27017 --name shopping-mongo mongo =>Run mongo DB , instance name shopping-mongo and input+ output port is 27017
+docker exec -it shopping-mongo /bin/bash => Run mongo in the interactive mode
+
