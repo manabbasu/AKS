@@ -1,3 +1,5 @@
+---------------------------------------Pull images,Create containers, docker compose,push shopping client to docker hub(test-we will push final image later)
+
 Soln-> Right Click->Open in terminal
 docker images
 docker ps =See the runnig container
@@ -13,7 +15,7 @@ pull
 push
 
 docker tag <imageid> manabranjanbasu/shoppingapp => It will create a new image name manabranjanbasu/shoppingapp locally, before that create a repo in dockerhub.com manabranjanbasu/shoppingapp
-docker push manabranjanbasu/shoppingapp:latest =>push the code to docker hub
+docker push manabranjanbasu/shoppingapp:latest =>push the shopping client code to docker hub
 
 docker pull mongo =>To download mongo image
 docker run -d -p 27017:27017 --name shopping-mongo mongo =>Run mongo DB , instance name shopping-mongo and input+ output port is 27017
@@ -29,7 +31,7 @@ docker system prune => remove none images
 
 docker-compose -f docker-compose.yml -f docker-compose.override.yml up -d => To create images+ running container from docker compose file
 
-------------------------------------------------------------------------------
+---------------------------------create k8 pod, deployments---------------------------------------------
 Make sure , in docker for windows->right click->Kubernetes->Context->Docker-Desktop
 kubectl get all => get all nodes/pd/service
 kubectl cluster-info => Get cluster info
@@ -51,7 +53,7 @@ Deployment>Replica Set > Pod > Node
 //Manufacturing & Logistic
 //Koushik-deepak-neeraj seth
 
-----------Download and run nginx image --------------------
+----------Download and run nginx image imperative way --------------------
 kubectl run swn-nginx --image=nginx =>to download ngnix image
 kubectl get all => check the status of the image and wait until its running
 kubectl port-forward swn-nginx 8080:80 => run nginx image on localhost:8080 by imperative way, ctrl+c to close.
@@ -186,5 +188,11 @@ kubectl proxy => to get dashboard in loal computer
 http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/
 		=>to access the dashboard(https://github.com/kubernetes/dashboard)
 paste the token for login
+-----------To Delete kubernet service and deployment
+kubectl get all
+
+kubectl delete -f .\nginx-depl.yml
+kubectl delete -f .\nginx-service.yml
+
 
 

@@ -1,0 +1,141 @@
+--------------------Create shoppingapi YML Declarative Way---------
+Create shoppingapi.yaml file
+	image: manabranjanbasu/shoppingapi:latest =>Retrive the image from dockerub
+	name: DatabaseSettings__ConnectionString => It will point to the dockercompose override connection string but using __ instead of :
+	nodeport => in order to test the application in local computer(External call) by the given node port, 31000 is the starting  port
+	port: 8000, targetPort: 80 => Forwarding port 8000
+
+----------------------Create deployment
+cd ..
+cd .\k8s\
+kubectl apply -f .\shoppingapi.yaml =>create deployment
+kuvectl get all
+
+------------retrive and test service
+PS C:\Manab\Education\AKS_LAB\k8s> kubectl get service
+NAME                  TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
+kubernetes            ClusterIP   10.96.0.1        <none>        443/TCP          163d
+mongo-service         ClusterIP   10.103.202.162   <none>        27017/TCP        8h
+shoppingapi-service   NodePort    10.103.84.221    <none>        8000:31000/TCP   31s
+
+
+http://127.0.0.1:31000/swagger/index.html => Test the service
+-------------------Update mongo password
+
+ env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Development
+            - name: DatabaseSettings__ConnectionString
+              value: mongodb://username:password@mongo-service:27017  
+
+
+kubectl apply -f .\shoppingapi.yaml =>update deployment
+http://127.0.0.1:31000/swagger/index.html => Test the service
+
+
+-------------create config map and move the conection string
+Create mongo-configmap.yml file and refer from shoppingapi.yaml file
+env:
+   - name: ASPNETCORE_ENVIRONMENT
+     value: Development
+   - name: DatabaseSettings__ConnectionString
+     valueFrom:
+     configMapKeyRef:
+        name: mongo-configmap
+        key: connection_string
+
+>kubectl apply -f .\mongo-configmap.yaml => define configmap.yaml
+>kubectl get cm => To check configmap
+>kubectl apply -f .\shoppingapi.yaml => update shoppingapi.yaml file
+
+http://127.0.0.1:31000/swagger/index.html => Test
+--------------------------------Create shopping client YML Declarative Way
+
+Create shoppingapi-configmal.yaml and mention the k8 service name. In docker compose, we mention the container name like http://shoppingapi
+shoppingapi_url: http://shoppingapi-service
+
+kubectl apply -f .\shoppingapi-configmap.yaml => Create configmap file
+
+kubectl get cm => To get the configmap list
+NAME                    DATA   AGE
+mongo-configmap         1      94m
+shoppingapi-configmap   1      46s
+
+
+kubectl apply -f .\shoppingclient.yaml
+
+PS C:\Manab\Education\AKS_LAB\k8s> kubectl get pod => to make sure all 3 pods are running
+NAME                                        READY   STATUS    RESTARTS   AGE
+mongo-deployment-9c5b4dddb-x4zr5            1/1     Running   0          10h
+shoppingapi-deployment-694b97fbf7-dzhnp     1/1     Running   0          102m
+shoppingclient-deployment-657996d46-p7dqb   1/1     Running   0          47s
+
+Test the service:
+kubectl get svc => To get all the running services
+NAME                     TYPE           CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
+kubernetes               ClusterIP      10.96.0.1        <none>        443/TCP          163d
+mongo-service            ClusterIP      10.103.202.162   <none>        27017/TCP        10h
+shoppingapi-service      NodePort       10.103.84.221    <none>        8000:31000/TCP   139m
+shoppingclient-service   LoadBalancer   10.110.174.123   localhost     8001:30000/TCP   114s
+
+http://127.0.0.1:30000/ => The site can't be reached, Fixed the issue in below section
+
+----------------------------------Troubleshoot the exception
+>kubectl get pod shoppingclient-deployment-657996d46-p7dqb -o wide => No problem found
+
+NAME                                        READY   STATUS    RESTARTS   AGE     IP           NODE             NOMINATED NODE   READINESS GATES
+shoppingclient-deployment-657996d46-p7dqb   1/1     Running   0          5m27s   10.1.0.118   docker-desktop   <none>           <none>
+
+>kubectl describe pod shoppingclient-deployment-657996d46-p7dqb => No issue found
+Events:
+  Type    Reason     Age    From               Message
+  ----    ------     ----   ----               -------
+  Normal  Scheduled  6m58s  default-scheduler  Successfully assigned default/shoppingclient-deployment-657996d46-p7dqb to docker-desktop
+  Normal  Pulling    6m53s  kubelet            Pulling image "manabranjanbasu/shoppingclient:latest"
+  Normal  Pulled     6m41s  kubelet            Successfully pulled image "manabranjanbasu/shoppingclient:latest" in 12.1293639s
+  Normal  Created    6m39s  kubelet            Created container shoppingclient
+  Normal  Started    6m38s  kubelet            Started container shoppingclient
+
+>kubectl logs shoppingclient-deployment-657996d46-p7dqb => No issue found
+warn: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[60]
+      Storing keys in a directory '/root/.aspnet/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed.
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]
+      No XML encryptor configured. Key {00bc957a-694d-473d-9e37-e485eac5f5b2} may be persisted to storage in unencrypted form.
+info: Microsoft.Hosting.Lifetime[0]
+      Now listening on: http://[::]:80
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: /app
+
+problem is type: LoadBalancer in shoppingclient.yaml file, so change it to nodeport for local computer
+
+---recreate the deployment
+>kubectl delete -f .\shoppingclient.yaml
+>kubectl apply -f .\shoppingclient.yaml
+
+http://127.0.0.1:30000/ => An unhandled exception occurred while processing the request.
+
+Solution, in shoppingapi-configmap.yaml change shoppingapi_url: http://shoppingapi-service:8000 from shoppingapi_url: http://shoppingapi-service, where default port is 80
+>kubectl apply -f .\shoppingapi-configmap.yaml
+>kubectl delete -f .\shoppingclient.yaml
+>kubectl get pod => wait until the pod is deleted
+>kubectl apply -f .\shoppingclient.yaml
+>kubectl get pod => wait until the pod is running
+>http://127.0.0.1:30000/ => Now it is working fine
+--------------Check it in the dashboard
+kubectl describe secret -n kube-system => to get the token
+kubectl proxy => to get dashboard in loal computer
+
+http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/
+		=>to access the dashboard(https://github.com/kubernetes/dashboard)
+paste the token for login
+
+
+***********Shoppingapi.yml is using  mongo-configmap.yaml, shoppingclient.yaml is using shoppingapi-configmap.yaml, mongo.yaml is using mongo-secret.yaml
+
+------------------------------Clear k8 resources
+
+kubectl delete -f . => remove all local resources after the testing is done. Then deploy microservices on AKS with ACR in next lesson

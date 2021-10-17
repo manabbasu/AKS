@@ -1,0 +1,94 @@
+-----------------------------------------------------------Create mongo db and service
+Create 2 files into k8s folder
+	1. mongo.yaml
+	2. mongo-secret.yaml
+kubectl apply -f .\mongo-secret.yaml
+kubectl apply -f .\mongo.yaml
+
+kubectl get pod --watch
+
+>kubectl get pod        
+NAME                               READY   STATUS                       RESTARTS   AGE
+mongo-deployment-9c5b4dddb-x4zr5   0/1     CreateContainerConfigError   0          47s
+
+>kubectl describe pod mongo-deployment-9c5b4dddb-x4zr5
+Events:
+  Type     Reason     Age                From               Message
+  ----     ------     ----               ----               -------
+  Normal   Scheduled  109s               default-scheduler  Successfully assigned default/mongo-deployment-9c5b4dddb-x4zr5 to docker-desktop      
+  Normal   Pulled     102s               kubelet            Successfully pulled image "mongo" in 2.2481106s
+  Normal   Pulled     100s               kubelet            Successfully pulled image "mongo" in 1.6575425s
+  Normal   Pulled     81s                kubelet            Successfully pulled image "mongo" in 7.3796912s
+  Normal   Pulled     65s                kubelet            Successfully pulled image "mongo" in 3.5997737s
+  Normal   Pulled     48s                kubelet            Successfully pulled image "mongo" in 2.1592767s
+  Normal   Pulled     36s                kubelet            Successfully pulled image "mongo" in 1.6606909s
+  Normal   Pulled     18s                kubelet            Successfully pulled image "mongo" in 1.9933195s
+  Normal   Pulling    4s (x8 over 105s)  kubelet            Pulling image "mongo"
+  Warning  Failed     2s (x8 over 102s)  kubelet            Error: secret "mongo-secret" not found
+  Normal   Pulled     2s                 kubelet            Successfully pulled image "mongo" in 2.54681s
+
+ERROR , RUN BELOW COMMAND
+>kubectl describe pod podname
+
+Put --- at the end of mongo.yaml and add service defination. Use --- in order keep deployment and service in the same file.
+>kubectl apply -f .\mongo.yaml
+>kubectl get service
+>kubectl describe service mongo-service
+>kubectl get pod
+>kubectl get pod <pod name> -o wide
+
+
+----------------------------------------------Shopping Docker Image push to dockerhub
+
+---Create container from docker compose
+cd..
+cd ./shopping
+docker-compose -f docker-compose.yml -f docker-compose.override.yml up -d => To create the running container from docker compose file
+docker ps => to see the running images
+localhost:8000/swagger/index.html
+localhost:8001
+docker-compose -f docker-compose.yml -f docker-compose.override.yml down
+
+PS C:\Manab\Education\AKS_LAB\Shopping> docker images
+REPOSITORY                           TAG                                                     IMAGE ID       CREATED         SIZE
+mongo                                latest                                                  fefd78e9381a   33 hours ago    699MB
+shoppingclient                       latest                                                  9016e58b6ee6   3 days ago      211MB
+shoppingapi                          latest                                                  313cd99b2b90   3 days ago      216MB
+nginx                                latest                                                  87a94228f133   5 days ago      133MB
+mongo                                <none>                                                  c1a14d3979c5   2 weeks ago     691MB
+docker/desktop-kubernetes            kubernetes-v1.21.2-cni-v0.8.5-critools-v1.17.0-debian   a502c6d66bd7   4 months ago    299MB
+
+----Create Tag
+docker tag 901 manabranjanbasu/shoppingclient => create tag for the image to push in the dockerhub later stage, docker tag <imageid> <dockerhubuserid>/shoppingclient
+docker tag 313 manabranjanbasu/shoppingapi
+
+Check the image name manabranjanbasu/shoppingspi and manabranjanbasu/shoppingspi 
+PS C:\Manab\Education\AKS_LAB\Shopping> docker images
+REPOSITORY                           TAG                                                     IMAGE ID       CREATED         SIZE
+mongo                                latest                                                  fefd78e9381a   33 hours ago    699MB
+shoppingclient                       latest                                                  9016e58b6ee6   3 days ago      211MB
+manabranjanbasu/shoppingclient       latest                                                  9016e58b6ee6   3 days ago      211MB
+shoppingapi                          latest                                                  313cd99b2b90   3 days ago      216MB
+manabranjanbasu/shoppingapi          latest                                                  313cd99b2b90   3 days ago      216MB
+nginx                                latest                                                  87a94228f133   5 days ago      133MB
+
+----Push the new images to dockerhub
+
+Create 2 pub repository in dockerhub shoppingclient and shoppingapi
+>docker login
+>docker push manabranjanbasu/shoppingapi
+>docker push manabranjanbasu/shoppingclient
+
+----delete shopping api and client images(Total 4)
+docker images
+PS C:\Manab\Education\AKS_LAB\Shopping> docker images
+REPOSITORY                           TAG                                                     IMAGE ID       CREATED         SIZE
+mongo                                latest                                                  fefd78e9381a   33 hours ago    699MB
+manabranjanbasu/shoppingclient       latest                                                  9016e58b6ee6   3 days ago      211MB
+shoppingapi                          latest                                                  313cd99b2b90   3 days ago      216MB
+manabranjanbasu/shoppingapi          latest                                                  313cd99b2b90   3 days ago      216MB
+
+----------------------------------------Create shopping api kubernet yml file
+
+docker rmi 9016e58b6ee6 -f
+docker rmi 313cd99b2b90 -f

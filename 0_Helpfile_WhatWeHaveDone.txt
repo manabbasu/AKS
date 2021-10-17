@@ -1,0 +1,7 @@
+Step 1. Create 2 Projects(API and UI)
+Step 2. Added docker file in Each project
+Step 3. Added Docker Compose File
+Step 4. Download Mongo image
+Step 5. Dockercompose_override to point the right configuration
+Step 6. Create k8 cluster locally by imperative and then declarative way
+Step 7. Push the local images to dockerhub and remove local images
