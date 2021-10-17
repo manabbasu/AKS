@@ -29,5 +29,162 @@ docker system prune => remove none images
 
 docker-compose -f docker-compose.yml -f docker-compose.override.yml up -d => To create images+ running container from docker compose file
 
+------------------------------------------------------------------------------
+Make sure , in docker for windows->right click->Kubernetes->Context->Docker-Desktop
+kubectl get all => get all nodes/pd/service
+kubectl cluster-info => Get cluster info
+kubectl version
+kubectl get nodes=>To get nodes
+kubectl get pod
+kubectl get services
+kubectl get deployments
+kubectl delete service <service name>
+
+Info : 
+
+Pod : Group of containers
+Replica Set : Group of identical Pod
+Deployment : Group of Replica Set. Define desired state.
+
+Deployment>Replica Set > Pod > Node
+
+//Manufacturing & Logistic
+//Koushik-deepak-neeraj seth
+
+----------Download and run nginx image --------------------
+kubectl run swn-nginx --image=nginx =>to download ngnix image
+kubectl get all => check the status of the image and wait until its running
+kubectl port-forward swn-nginx 8080:80 => run nginx image on localhost:8080 by imperative way, ctrl+c to close.
+kubectl get pod => to get the pod information where its nginx is running
+kubectl delete pod swn-nginx => To delete the Pod
+kubectl get pod --watch
+----------------------Create deployment using kubectl create command
+kubectl create deployment nginx-depl --image=nginx => Create the deployment
+kubectl get deployment
+keubectl get all => It will now show the deployment, replica set , pod and service as we have created the deployment.
+Alteratively, you can run kubectl get deployment or replicaset or pod , Check the name of replcaset and pod , it will have the prefix of prev hirerchy
+
+-------------------------------Output of kubectl get all and check the name
+NAME                              READY   STATUS    RESTARTS   AGE
+pod/nginx-depl-5c8bf76b5b-ssnqs   1/1     Running   0          24m
+
+NAME                 TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+service/kubernetes   ClusterIP   10.96.0.1    <none>        443/TCP   162d
+
+NAME                         READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/nginx-depl   1/1     1            1           24m
+
+NAME                                    DESIRED   CURRENT   READY   AGE
+replicaset.apps/nginx-depl-5c8bf76b5b   1         1         1       24m
+-------------------------------Edit the deployment manifest
+
+kubectl edit deployment nginx-depl=> To open the manifest file of the deployment in a notepad
+
+change replicas: 1 to replicas: 2, save and close the file
+
+> kubectl get pod => will return 2 Pods
+NAME                          READY   STATUS    RESTARTS   AGE
+nginx-depl-5c8bf76b5b-d5rq2   1/1     Running   0          24s
+nginx-depl-5c8bf76b5b-ssnqs   1/1     Running   0          33m
+
+--------------------------------Create mongo deployment using kubectl
+kubectl create deployment mongo-depl --image=mongo
+kubectl get pod
+
+> kubectl get pod
+NAME                          READY   STATUS              RESTARTS   AGE
+mongo-depl-5fd6b7d4b4-4n2cp   0/1     ContainerCreating   0          47s
+nginx-depl-5c8bf76b5b-d5rq2   1/1     Running             0          6m6s
+nginx-depl-5c8bf76b5b-ssnqs   1/1     Running             0          39m
+
+> kubectl describe pod mongo-depl-5fd6b7d4b4-4n2cp => To get the details, important section is the events section for debugging purpose
+Events:
+  Type    Reason     Age    From               Message
+  ----    ------     ----   ----               -------
+  Normal  Scheduled  6m21s  default-scheduler  Successfully assigned default/mongo-depl-5fd6b7d4b4-4n2cp to docker-desktop
+  Normal  Pulling    6m16s  kubelet            Pulling image "mongo"
+  Normal  Pulled     4m4s   kubelet            Successfully pulled image "mongo" in 2m12.6204089s
+  Normal  Created    3m58s  kubelet            Created container mongo
+  Normal  Started    3m53s  kubelet            Started container mongo
+
+> kubectl logs nginx-depl-5c8bf76b5b-tzv2k => Debug the Pod
+---------------------------------Get inside the mongo pod and run interactive command
+
+PS C:\Manab\Education\AKS_LAB\Shopping> kubectl get pod
+NAME                          READY   STATUS    RESTARTS   AGE
+mongo-depl-5fd6b7d4b4-4n2cp   1/1     Running   0          9m12s
+nginx-depl-5c8bf76b5b-d5rq2   1/1     Running   0          14m
+nginx-depl-5c8bf76b5b-ssnqs   1/1     Running   0          47m
+
+>kubectl exec mongo-depl-5fd6b7d4b4-4n2cp -it sh => run mongo interactive shell mode
+
+#ls => to see the folder structure
+#mongo => to access the mongo cli
+> show dbs
+admin   0.000GB
+config  0.000GB
+local   0.000GB
+
+>exit => to exit from mongo command
+----------------------------Delete the deployment
+PS C:\Manab\Education\AKS_LAB\Shopping> kubectl get deployment
+NAME         READY   UP-TO-DATE   AVAILABLE   AGE
+mongo-depl   1/1     1            1           15m
+nginx-depl   2/2     2            2           53m
+PS C:\Manab\Education\AKS_LAB\Shopping> kubectl delete deployment mongo-depl
+deployment.apps "mongo-depl" deleted
+PS C:\Manab\Education\AKS_LAB\Shopping> kubectl delete deployment nginx-depl
+deployment.apps "nginx-depl" deleted
+PS C:\Manab\Education\AKS_LAB\Shopping> kubectl get all
+NAME                 TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+service/kubernetes   ClusterIP   10.96.0.1    <none>        443/TCP   162d
+
+-----------------------------Kubectl in Declarative way(VS code)
+create nginx-depl.yml
+kubectl apply -f .\nginx-depl.yml
+
+
+PS C:\Manab\Education\AKS_LAB> kubectl get all
+NAME                              READY   STATUS    RESTARTS   AGE  
+pod/nginx-depl-644599b9c9-rx729   1/1     Running   0          2m10s
+
+NAME                 TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+service/kubernetes   ClusterIP   10.96.0.1    <none>        443/TCP   162d
+
+NAME                         READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/nginx-depl   1/1     1            1           2m13s
+
+NAME                                    DESIRED   CURRENT   READY   AGE
+replicaset.apps/nginx-depl-644599b9c9   1         1         1       2m12s
+
+
+PS C:\Manab\Education\AKS_LAB> kubectl get deployment
+NAME         READY   UP-TO-DATE   AVAILABLE   AGE
+nginx-depl   1/1     1            1           2m43s
+-----------------update the manifest file
+Change the replicaset from 1 to 2. replicas: 2
+Then to update the deployment run the same command
+kubectl apply -f .\nginx-depl.yml
+
+PS C:\Manab\Education\AKS_LAB> kubectl get pod       
+NAME                          READY   STATUS    RESTARTS   AGE
+nginx-depl-644599b9c9-hf4q8   1/1     Running   0          15s
+nginx-depl-644599b9c9-rx729   1/1     Running   0          9m49s
+
+
+kubectl get deployment nginx-depl -o yaml => to get yaml file format and deployment configuration
+
+create a service-yaml file(mention the same label(metadata\labels\app) as name(spec\selector\app)
+kubectl apply -f .\nginx-service.yml => To create the service
+kubectl describe service nginx-service or kubectl get pod -o wide => to get endpoint of the service
+-------------------------Deploy kubernetes web ui dashboard
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/aio/deploy/recommended.yaml => to deploy into dashboard
+
+kubectl describe secret -n kube-system => to get the token
+kubectl proxy => to get dashboard in loal computer
+
+http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/
+		=>to access the dashboard(https://github.com/kubernetes/dashboard)
+paste the token for login
 
 
