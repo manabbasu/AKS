@@ -5,3 +5,6 @@ Step 4. Download Mongo image
 Step 5. Dockercompose_override to point the right configuration
 Step 6. Create k8 cluster locally by imperative and then declarative way
 Step 7. Push the local images to dockerhub and remove local images
+Step 8. Deploy microservices on kubernetes,Test the micro services locally from kuernetes and then remove all k8 resources
+Step 9. Deploy microservices on AKS with ACR using secret information
+Step 10. Scale the application for zero downtime deployment

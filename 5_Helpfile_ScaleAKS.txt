@@ -1,0 +1,160 @@
+-----------Check the Current Configuration
+
+>kubectl get pod : Check no of Pod item, its 1 for each micro service
+NAME                                         READY   STATUS    RESTARTS   AGE
+mongo-deployment-9c5b4dddb-687r2             1/1     Running   0          99m
+shoppingapi-deployment-6c6f84894b-x6qrz      1/1     Running   0          94m
+shoppingclient-deployment-56758cbc89-ncxnh   1/1     Running   0          94m
+
+>kubectl get deployment => get the list of deployments
+NAME                        READY   UP-TO-DATE   AVAILABLE   AGE
+mongo-deployment            1/1     1            1           101m
+shoppingapi-deployment      1/1     1            1           96m
+shoppingclient-deployment   1/1     1            1           101m
+
+>kubectl get all => get all
+NAME                                             READY   STATUS    RESTARTS   AGE
+pod/mongo-deployment-9c5b4dddb-687r2             1/1     Running   0          102m
+pod/shoppingapi-deployment-6c6f84894b-x6qrz      1/1     Running   0          97m
+pod/shoppingclient-deployment-56758cbc89-ncxnh   1/1     Running   0          97m
+
+NAME                             TYPE           CLUSTER-IP     EXTERNAL-IP     PORT(S)        AGE
+service/kubernetes               ClusterIP      10.0.0.1       <none>          443/TCP        22h
+service/mongo-service            ClusterIP      10.0.150.245   <none>          27017/TCP      102m
+service/shoppingapi-service      ClusterIP      10.0.82.76     <none>          80/TCP         97m
+service/shoppingclient-service   LoadBalancer   10.0.16.121    20.76.229.193   80:30331/TCP   102m
+
+NAME                                        READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/mongo-deployment            1/1     1            1           102m
+deployment.apps/shoppingapi-deployment      1/1     1            1           97m
+deployment.apps/shoppingclient-deployment   1/1     1            1           102m
+
+NAME                                                   DESIRED   CURRENT   READY   AGE
+replicaset.apps/mongo-deployment-9c5b4dddb             1         1         1       102m
+replicaset.apps/shoppingapi-deployment-6c6f84894b      1         1         1       97m
+replicaset.apps/shoppingclient-deployment-56758cbc89   1         1         1       97m
+replicaset.apps/shoppingclient-deployment-6d48c5d784   0         0         0       102m
+
+
+---Scale to 3 replicas for the pod
+>kubectl scale --replicas=3 deployment.apps/shoppingclient-deployment
+deployment.apps/shoppingclient-deployment scaled
+
+ALT - in shoppingclient.yaml, change the spec\replicas =3
+
+----------------Check the current POD count
+> kubectl get pod OR kubectl get pod --watch
+NAME                                         READY   STATUS    RESTARTS   AGE 
+mongo-deployment-9c5b4dddb-687r2             1/1     Running   0          104m
+shoppingapi-deployment-6c6f84894b-x6qrz      1/1     Running   0          99m 
+shoppingclient-deployment-56758cbc89-64wlw   1/1     Running   0          35s 
+shoppingclient-deployment-56758cbc89-n5jlg   1/1     Running   0          35s 
+shoppingclient-deployment-56758cbc89-ncxnh   1/1     Running   0          99m
+
+---------------Reduce POD(If Required)
+>kubectl scale --replicas=1 deployment.apps/shoppingclient-deployment
+
+---------------Auto Scaling
+>az aks show --resource-group myResourceGroup --name myAKSCluesterm01 --query kubernatesVersion --output table => The kubernet vesrion should be greater than 1.1 for autoscaling
+It didn't show any result for me.
+
+
+Autoscaling can be defined in yaml file - shoppingautoscale.yaml
+
+>kubectl apply -f .\aks\
+
+
+>kubectl get hpa => to get the autoscale defination
+NAME                 REFERENCE                              TARGETS   MINPODS   MAXPODS   REPLICAS   AGE
+shoppingapi-hpa      Deployment/shoppingapi-deployment      0%/50%    2         10        2          52s
+shoppingclient-hpa   Deployment/shoppingclient-deployment   0%/50%    3         10        3          52s
+
+>kubectl get pod
+mongo-deployment-9c5b4dddb-687r2             1/1     Running   0          127m
+shoppingapi-deployment-6c6f84894b-2c8tz      1/1     Running   0          104s
+shoppingapi-deployment-6c6f84894b-x6qrz      1/1     Running   0          122m
+shoppingclient-deployment-56758cbc89-cjr4f   1/1     Running   0          104s
+shoppingclient-deployment-56758cbc89-ftmvn   0/1     Pending   0          104s   >kubectl describe pod shoppingclient-deployment-56758cbc89-ftmvn
+shoppingclient-deployment-56758cbc89-ncxnh   1/1     Running   0          122m
+
+
+>kubectl describe pod shoppingclient-deployment-56758cbc89-ftmvn => to debug any issue like pending status
+
+
+---------------------Update shopping microservices with zero downtime deployment
+
+--remove existing images of shopping client
+docker rmi -f 9016e58b6ee6
+
+----create the image
+cd shopping
+>docker-compose -f docker-compose.yml -f docker-compose.override.yml up -d => create new images from docker compose
+> check in the localhost
+>stop the running containers once the check is done
+
+
+----tag and push the new version of shopping.client image to ACR
+>az acr list --resource-group myResourceGroup --query "[].{acrLoginServer:loginServer}" --output table => to get the login server name
+shoppingacrm01.azurecr.io
+
+>docker tag shoppingclient:latest shoppingacrm01.azurecr.io/shoppingclient:v2 =>create tag name
+shoppingclient                             latest
+shoppingacrm01.azurecr.io/shoppingclient   v2
+
+>docker push shoppingacrm01.azurecr.io/shoppingclient:v2 => push the image
+>az acr login --name shoppingacrm01 => in you get authorized arror
+
+>az acr repository list --name shoppingacrm01 --output table => Check the images in acr
+shoppingapi
+shoppingclient
+
+>az acr repository show-tags --name shoppingacrm01 --repository shoppingclient --output table
+Result
+--------
+v1
+v2
+ALT-> AZ->shoppingacrm01->repository->shopping client ->Tags => It will show both v1 and v2
+
+
+---------------------Deploy shopping microservices with zero downtime deployment
+>kubectl get pod => check no of Pod and make sure more than one Pod is running
+
+in aks\shoppingclient.yaml change the image version
+image: shoppingacrm01.azurecr.io/shoppingclient:v2
+
+kubectl apply -f .\aks\ => Deployment
+
+>kubectl get deployment -o wide => to check the deployed version
+NAME                        READY   UP-TO-DATE   AVAILABLE   AGE   CONTAINERS       IMAGES                                        SELECTOR
+mongo-deployment            1/1     1            1           24h   mongodb          mongo                                         app=mongodb     
+shoppingapi-deployment      2/2     2            2           24h   shoppingapi      shoppingacrm01.azurecr.io/shoppingapi:v1      app=shoppingapi 
+shoppingclient-deployment   2/3     3            2           24h   shoppingclient   shoppingacrm01.azurecr.io/shoppingclient:v2   app=shoppingclient
+
+
+---To fix cpu allocation problem
+Both the shoppingclient.yml and shoppingapi.yml, change the cpu utilization
+
+ requests:
+              memory: "64Mi"
+              cpu: "0.1"
+            limits:
+              memory: "128Mi"
+              cpu: "0.3"   
+
+from 
+ resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "128Mi"
+              cpu: "500m"   
+
+>kubectl apply -f .\aks\ => Deployment
+Now, >kubectl get pod will show all the Pods as running
+
+-------------------Roolback
+
+To roll back just change the version below and deploy
+
+image: shoppingacrm01.azurecr.io/shoppingclient:v1

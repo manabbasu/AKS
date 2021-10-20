@@ -1,0 +1,190 @@
+Prepare Multi Container shopping Microservices for using AKS
+Step 1. Create a contaier image from docker compose
+Step 2. Test Multi container application in the local docker environment
+Step 3. once completed, push the image in ACR
+
+--------------------------Create images from docker compose
+
+>kubectl config get-contexts=> return all the docker congiguration of the computer. current one mark as star
+
+CURRENT   NAME             CLUSTER          AUTHINFO                             NAMESPACE
+          cart-aks         cart-aks         clusterUser_readit-app-rg_cart-aks   
+*         docker-desktop   docker-desktop   docker-desktop
+
+>kubectl config current-context => To get current context
+>docker-compose -f docker-compose.yml -f docker-compose.override.yml up -d => To create images+ running container from docker compose file
+
+> Test the application in browser. 
+http://localhost:8000/swagger/index.html, http://localhost:8001/
+
+
+>docker-compose -f docker-compose.yml -f docker-compose.override.yml down=> Stop the container
+
+--------------------------------------Push to ACR
+
+---install az cli, login to azure
+Install azure CLI from Microsoft
+
+>az --version =>Check the installation in vs code
+
+>az login => Login to azure
+---Create RG, ACR, enable admin
+>az group create --name myResourceGroup --location westeurope => Create resource group
+
+>az acr create --resource-group myResourceGroup --name shoppingacrm01 --sku Basic =>create acr
+
+>az acr update -n shoppingacrm01 --admin-enabled true => Enable a/c. Each acr has admin a/c which is disabled by default. ALt- in portal acr1->access Keys->admin user=enable
+							aks try to pull the image from acr which need admin enable.
+---Login to acr
+>az acr login --name shoppingacrm01=>login to acr
+
+>docker images => check the image name
+
+-- Get the login server name
+>az acr list --resource-group myResourceGroup --query "[].{acrLoginServer:loginServer}" --output table => get the login server addess
+[
+  {
+    "acrLoginServer": "shoppingacrm01.azurecr.io"
+  }
+]
+
+Alternatively in portal -> acr1-> access keys->login server name
+
+---------Create new images
+>docker tag shoppingapi:latest shoppingacrm01.azurecr.io/shoppingapi:v1 => Create a new tag from the latest shoppingapi image
+
+>docker images =>check the new image name
+shoppingacrm01.azurecr.io/shoppingapi   v1  
+
+>docker tag shoppingclient:latest shoppingacrm01.azurecr.io/shoppingclient:v1 => Create a new tag from the latest shoppingclient image
+
+>docker images =>check the new image name
+shoppingacrm01.azurecr.io/shoppingclient   v1  
+
+---------Push to acr
+>docker push shoppingacrm01.azurecr.io/shoppingapi:v1 => Push shopping api image to acr
+>docker push shoppingacrm01.azurecr.io/shoppingclient:v1 => Push shopping client image to acr
+
+>az acr repository list --name shoppingacrm01 --output table => Check the images in acr
+shoppingapi
+shoppingclient
+
+>az acr repository show-tags --name shoppingacrm01 --repository shoppingclient --output table => check the version of shopping client image
+v1
+
+----------------------------------------------Deploy AKS cluster
+--Create kubernet cluster 
+>az aks create --resource-group myResourceGroup --name myAKSCluesterm01 --node-count 1 --generate-ssh-keys --attach-acr shoppingacrm01 =>create aks cluster and attach the acr
+
+
+>az aks install-cli => Install kubernet cli to access aks from local computer
+
+>az aks get-credentials --resource-group myResourceGroup --name myAKSCluesterm01 => To get credentials
+Merged "myAKSCluesterm01" as current context in C:\Users\ManabRanjan\.kube\config
+
+>kubectl config get-contexts => To get the current context *
+CURRENT   NAME               CLUSTER            AUTHINFO                                       NAMESPACE
+          cart-aks           cart-aks           clusterUser_readit-app-rg_cart-aks
+          docker-desktop     docker-desktop     docker-desktop
+*         myAKSCluesterm01   myAKSCluesterm01   clusterUser_myResourceGroup_myAKSCluesterm01
+
+>kubectl get all => To get the service
+NAME                 TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+service/kubernetes   ClusterIP   10.0.0.1     <none>        443/TCP   9m16s
+
+>kubectl get nodes => To retrive node information
+NAME                                STATUS   ROLES   AGE    VERSION
+aks-nodepool1-16136068-vmss000000   Ready    agent   9m5s   v1.20.9
+
+--------------------------Create image pull secret for acr container so that aks can pull from acr
+
+>az acr list --resource-group myResourceGroup --query "[].{acrLoginServer:loginServer}" --output table => get the login server addess
+AcrLoginServer
+-------------------------
+shoppingacrm01.azurecr.io
+
+GO TO azure->shoppingacrm01->settings-> Access Keys->Password - Copy it
+xXw3hKPaArv96CHsE1xqJzjX1hp/VELQ
+
+--------------Create Secret
+>kubectl create secret docker-registry acr-secret --docker-server=shoppingacrm01.azurecr.io --docker-username=shoppingacrm01 
+				--docker-password=xXw3hKPaArv96CHsE1xqJzjX1hp/VELQ  --docker-email=manab.it@gmail.com
+secret/acr-secret created
+
+>kubectl get secret => Check the secret
+NAME                  TYPE                                  DATA   AGE
+acr-secret            kubernetes.io/dockerconfigjson        1      85s
+
+---Modify kubernet yaml manifest file for the secret
+
+COPY all files from k8s to aks folder 
+
+shoppingapi.yaml, shoppingclient.yaml:
+	Modify the container image name to 
+		image: shoppingacrm01.azurecr.io/shoppingapi:v1 from  image: manabranjanbasu/shoppingapi:latest
+		image: shoppingacrm01.azurecr.io/shoppingclient:v1 from  image: manabranjanbasu/shoppingclient:latest
+	Add 
+		imagePullSecrets:	
+          	  - name: acr-secret
+shoppingapi.yaml
+	in service defination, remove type: NodePort.The default type will be cluster ip
+	remove nodePort: 31000
+	remove targetPort: 80 , no forwarding port is required, it will be used cluster ip
+	modify port: 80 from port: 8000, default port
+shoppingapi-configmap.yaml
+        modify shoppingapi_url: http://shoppingapi-service from shoppingapi_url: http://shoppingapi-service:8000
+shoppingclient.yaml
+	in service defination, change type: LoadBalancer from type: nodeport
+	remove nodePort
+	remove targetPort: 80
+	modify port: 80 from port: 8000, default port
+
+--------------Run aks manifest file
+>kubectl config get-contexts => to check the current context
+CURRENT   NAME               CLUSTER            AUTHINFO                                       NAMESPACE
+          cart-aks           cart-aks           clusterUser_readit-app-rg_cart-aks
+          docker-desktop     docker-desktop     docker-desktop
+*         myAKSCluesterm01   myAKSCluesterm01   clusterUser_myResourceGroup_myAKSCluesterm01
+
+
+PS C:\Manab\Education\AKS_LAB\Shopping> kubectl get all => to check the resources
+NAME                 TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+service/kubernetes   ClusterIP   10.0.0.1     <none>        443/TCP   20h
+
+PS C:\Manab\Education\AKS_LAB> kubectl apply -f .\aks\ => run all yaml files in aks folder
+
+>kubectl get all => to check the resources and make sure all kubernet resources(deployment, pod, node, services) created successfully 
+NAME                                             READY   STATUS    RESTARTS   AGE
+pod/mongo-deployment-9c5b4dddb-687r2             1/1     Running   0          6m17s
+pod/shoppingapi-deployment-6c6f84894b-x6qrz      1/1     Running   0          74s
+pod/shoppingclient-deployment-56758cbc89-ncxnh   1/1     Running   0          74s
+
+NAME                             TYPE           CLUSTER-IP     EXTERNAL-IP     PORT(S)        AGE
+service/kubernetes               ClusterIP      10.0.0.1       <none>          443/TCP        21h
+service/mongo-service            ClusterIP      10.0.150.245   <none>          27017/TCP      6m17s
+service/shoppingapi-service      ClusterIP      10.0.82.76     <none>          80/TCP         74s
+service/shoppingclient-service   LoadBalancer   10.0.16.121    20.76.229.193   80:30331/TCP   6m17s
+
+NAME                                        READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/mongo-deployment            1/1     1            1           6m17s
+deployment.apps/shoppingapi-deployment      1/1     1            1           74s
+deployment.apps/shoppingclient-deployment   1/1     1            1           6m17s
+
+NAME                                                   DESIRED   CURRENT   READY   AGE
+replicaset.apps/mongo-deployment-9c5b4dddb             1         1         1       6m17s
+replicaset.apps/shoppingapi-deployment-6c6f84894b      1         1         1       74s
+replicaset.apps/shoppingclient-deployment-56758cbc89   1         1         1       74s
+replicaset.apps/shoppingclient-deployment-6d48c5d784   0         0         0       6m17s
+
+
+PS C:\Manab\Education\AKS_LAB> kubectl get svc => to get the external ip
+NAME                     TYPE           CLUSTER-IP     EXTERNAL-IP     PORT(S)        AGE
+kubernetes               ClusterIP      10.0.0.1       <none>          443/TCP        21h
+mongo-service            ClusterIP      10.0.150.245   <none>          27017/TCP      15m
+shoppingapi-service      ClusterIP      10.0.82.76     <none>          80/TCP         10m
+shoppingclient-service   LoadBalancer   10.0.16.121    20.76.229.193   80:30331/TCP   15m
+
+
+BROWSER http://20.76.229.193, looks ok
+
+ERROR >kubectl describe pod name returned from >kubectl get pod
