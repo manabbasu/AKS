@@ -1,0 +1,45 @@
+in ADO , delete the pipeline and repository, remove the yml file- azure-pipelines.yml
+
+-------------------------Select Repo, create pipeline
+Create a new Pipeline->Select Github as repository->configure: Deploy to Azure Kubernetes Service=> This will cover build, cont. integration and deployment
+Choose Cluster= myAKSClusterm01, Namespace= Existing, default, Container Registry= shoppingacrm01, imagename= shoppingapi, serviceport= 80
+-> Validate and Configure.
+
+Now check ->Project settings-> Service Connection -> 2 Service Connections a)myAKSClusterm01-default b)shoppingacrm01-1208
+Check Pipeline-> Environments-> go to the default cluster-> It will show all informations of AKS like pod, deployment, replica set etc.
+
+When you click on Save and Run, it will commit below files in github repository
+azure-pipelines.yml
+manifests/deployment.yml
+manifests/service.yml
+
+Error : ##[error]COPY failed: file not found in build context or excluded by .dockerignore: stat Shopping.API/Shopping.API.csproj: file does not exist
+##[error]The process '/usr/bin/docker' failed with exit code 1
+
+Fix: In Vs code, pull the latest code which contains below files
+azure-pipelines.yml
+manifests/deployment.yml
+manifests/service.yml
+
+In azure-pipelines.yml-> 
+a)add buildContext in build task
+containerRegistry: $(dockerRegistryServiceConnection)
+buildContext: $(Build.SourceDirectory)/Shopping
+ tags: |
+ $(tag)
+b) Change Deployment task- from
+manifests: |
+                $(Pipeline.Workspace)/manifests/deployment.yml
+                $(Pipeline.Workspace)/manifests/service.yml
+
+To 
+manifests: |
+                $(Pipeline.Workspace)/manifests/shoppingapi.yaml
+
+c) combine deployment and service defination in a new manifests/shoppingapi.yaml
+In order to do that copy the content from .\aks\shoppingapi.yaml to manifest\shoppingapi.yaml
+Delete- 
+manifests/deployment.yml
+manifests/service.yml
+
+
