@@ -53,3 +53,11 @@ Delete azure-pipelines.yml and manifests folder
 
 In ADO, delete the pipeline - manabbasu.run-devops
 
+Push the changes to git
+
+Create new pipeline in ADO from github repo
+	In configure your pipeline, choose- Existing Azure Pipelines YAML File
+		Branch: main
+		Path: /pipelines/shoppingapi-pipeline.yaml
+		Run
+
