@@ -60,3 +60,38 @@ shoppingclient
 
 ERROR- It creates a new repository which is not expected
 Fix: azure-pipelines.yml, change imageRepository: 'manabbasurundevops' to imageRepository: 'shoppingapi'
+
+Now in azureshoppingacrm01->Repositories, if you click shoppingapi, it will show 2 versions
+14
+v1
+-----------------------------------------------The Complete azure-pipelines.yml is as below, before we delete it in next step
+variables:
+  # Container registry service connection established during pipeline creation
+  dockerRegistryServiceConnection: '6074808e-0eba-4f09-b23c-280da7d26567'
+  imageRepository: 'shoppingapi'
+  containerRegistry: 'shoppingacrm01.azurecr.io'
+  dockerfilePath: '$(Build.SourcesDirectory)/Shopping/Shopping.API/Dockerfile'
+  tag: '$(Build.BuildId)'
+
+  # Agent VM image name
+  vmImageName: 'ubuntu-latest'
+
+stages:
+- stage: Build
+  displayName: Build and push stage
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: Docker@2
+      displayName: Build and push an image to container registry
+      inputs:
+        command: buildAndPush
+        repository: $(imageRepository)
+        dockerfile: $(dockerfilePath)
+        containerRegistry: $(dockerRegistryServiceConnection)
+        buildContext: '$(Build.SourcesDirectory)/Shopping'
+        tags: |
+          $(tag)
