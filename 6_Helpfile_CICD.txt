@@ -45,5 +45,18 @@ variables:
 ERROR : ##[error]COPY failed: file not found in build context or excluded by .dockerignore: stat Shopping.API/Shopping.API.csproj: file does not exist
 ##[error]The process '/usr/bin/docker' failed with exit code 1
 -----------------------------------------Fix the error
+
+Pull the latest code from repo and you can find the file azure-pipeline.yml
 Add the build context below
-buildContext: '$(Build.SourcesDirectory)/Shopping in azure-pipeline.yml file. Otherwise by dafault the dockerfile is searched in the root folder 
+buildContext: '$(Build.SourcesDirectory)/Shopping' in azure-pipeline.yml file. Otherwise by dafault the dockerfile is searched in the root folder 
+
+
+It will push the image to acr
+In shoppingacrm01->Repositories-> one new image will be found manabbasurundevops
+
+manabbasurundevops
+shoppingapi
+shoppingclient
+
+ERROR- It creates a new repository which is not expected
+Fix: azure-pipelines.yml, change imageRepository: 'manabbasurundevops' to imageRepository: 'shoppingapi'
