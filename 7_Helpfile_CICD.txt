@@ -42,4 +42,14 @@ Delete-
 manifests/deployment.yml
 manifests/service.yml
 
+Job Success
+
+--------------------------------------
+Challange of the current process
+same shoppingapi.yaml now exist in 2 locations manifests(to be use by azurepipeline.yml) and aks folder ( to be executed by kubectl)
+
+Create a new folder - pipelines and new file - shoppingapi-pipeline.yaml, copy content from azure-pipelines.yml(which was originally generated from ado) and refactor
+Delete azure-pipelines.yml and manifests folder
+
+In ADO, delete the pipeline - manabbasu.run-devops
 
