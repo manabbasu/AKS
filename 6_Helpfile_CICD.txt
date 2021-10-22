@@ -1,0 +1,49 @@
+------Create Pipeline
+In Devops- Create Project->Pipeline->
+Create Pipeline->Choose Github as Source->Select the project run-devops
+->Select Docker Build and Push to Azure Container Registry
+->Select VS Subscription->
+Select Container Registry "shoppingacrm01"
+Image name= dafulted to manabbasurundevops
+Dockerfile-> Defaulted to $(Build.SourcesDirectory)/Shopping/Shopping.API/Dockerfile
+Validate and Configure=>Save and Run=>Check build process
+=> It will Configuring resources and generating YAML and generates azure-pipelines.yml below.
+
+trigger:
+- main => It will trigger pipeline on any changes in main branch
+
+variables:
+  # Container registry service connection established during pipeline creation
+  dockerRegistryServiceConnection: '6074808e-0eba-4f09-b23c-280da7d26567' => Connection.It can be found in Project Settings->Pipeline-> Service Connection
+  imageRepository: 'manabbasurundevops'=>Repo name
+  containerRegistry: 'shoppingacrm01.azurecr.io'=> login name of acr
+  dockerfilePath: '$(Build.SourcesDirectory)/Shopping/Shopping.API/Dockerfile' => docker file path to build the application from docker file
+  tag: '$(Build.BuildId)'
+
+  # Agent VM image name
+  vmImageName: 'ubuntu-latest'
+
+ stages: =>can build and deployment stage
+- stage: Build
+  displayName: Build and push stage
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: Docker@2=>Build and push docker images
+      displayName: Build and push an image to container registry
+      inputs:
+        command: buildAndPush
+        repository: $(imageRepository)
+        dockerfile: $(dockerfilePath)
+        containerRegistry: $(dockerRegistryServiceConnection)
+        tags: |
+          $(tag)
+
+ERROR : ##[error]COPY failed: file not found in build context or excluded by .dockerignore: stat Shopping.API/Shopping.API.csproj: file does not exist
+##[error]The process '/usr/bin/docker' failed with exit code 1
+-----------------------------------------Fix the error
+Add the build context below
+buildContext: '$(Build.SourcesDirectory)/Shopping in azure-pipeline.yml file. Otherwise by dafault the dockerfile is searched in the root folder 
