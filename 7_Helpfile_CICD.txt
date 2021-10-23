@@ -44,7 +44,7 @@ manifests/service.yml
 
 Job Success
 
---------------------------------------
+--------------------------------------Create a custom pipeline from the ADO generated YAML and Remove the ADO generated Pipeline
 Challange of the current process
 same shoppingapi.yaml now exist in 2 locations manifests(to be use by azurepipeline.yml) and aks folder ( to be executed by kubectl)
 
@@ -61,3 +61,10 @@ Create new pipeline in ADO from github repo
 		Path: /pipelines/shoppingapi-pipeline.yaml
 		Run
 
+Success
+
+Validation: Azure Portal-> shoppingacrm01-> Repositories-> Shopping api-> see the versions
+-------------------------------Create shopping Client Pipeline
+In ADO, Rename the existing pipeline from manabbasu.run-devops to shoppingapi-pipeline
+
+In code, Duplicate pipelines\shoppingapi-pipeline and save as shoppingclient-pipeline. Refactor the file(API to CLient)
