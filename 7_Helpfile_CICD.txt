@@ -95,5 +95,14 @@ change from
 
 Push to git
 It will not trigger the pipeline as those files are not mentioned in the included folder.
-Change in Home\index.cshtml
+Change in Home\index.cshtml to trigger client application
+go to the AKS->myAKSClusterm01->Services and ingress-> copy the external IP and hit in browser => This will show the page
+
+In the ADO - Rename the pipeline name to shoppingclient-pipeline
+
+--------------------Delete all k8 resources from azure
+>kubectl delete -f .\aks\
+>kubectl get all
+
+
 
