@@ -68,3 +68,28 @@ Validation: Azure Portal-> shoppingacrm01-> Repositories-> Shopping api-> see th
 In ADO, Rename the existing pipeline from manabbasu.run-devops to shoppingapi-pipeline
 
 In code, Duplicate pipelines\shoppingapi-pipeline and save as shoppingclient-pipeline. Refactor the file(API to CLient)
+
+In ADO, create a new pipeline(source github, choose repo, existing azure pipelines YAML file)
+
+>kubectl get pod --watch
+
+> go to the AKS->myAKSClusterm01->Services and ingress-> copy the external IP and hit in browser => This 20.76.198.65 page can’t be found
+SOLVE:
+> kubectl get pod
+>kubectl logs
+>kubectl logs <EACH POD NAME>
+
+Check the Env Variable
+>kubectl exec -it shoppingclient-deployment-5cf548b758-6k7gb -- sh => Open interactive terminal
+>printenv => List of env variable and value, check the URLS/ endpoint
+
+No Issue found
+
+Check ADO-> Pipeline -> Check log for each step of shopping client pipeline-> View raw logs
+The line found under build and push stage- 
+2021-10-23T00:15:43.6690031Z [command]/usr/bin/docker build -f /home/vsts/work/1/s/Shopping/Shopping.API/Dockerfile --label 
+
+Fix- In both pipelines\shoppingapi-pipeline.yaml and pipelines\shoppingclient-pipeline.yaml, under variables
+change from 
+  dockerfilePath: '**/Dockerfile' to Shopping/Shopping.API/Dockerfile and Shopping/Shopping.Client/Dockerfile
+
