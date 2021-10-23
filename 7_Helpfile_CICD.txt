@@ -103,6 +103,7 @@ In the ADO - Rename the pipeline name to shoppingclient-pipeline
 --------------------Delete all k8 resources from azure
 >kubectl delete -f .\aks\
 >kubectl get all
+>az group delete --name myResourceGroup --yes --no-wait
 
 
 
