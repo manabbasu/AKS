@@ -93,3 +93,7 @@ Fix- In both pipelines\shoppingapi-pipeline.yaml and pipelines\shoppingclient-pi
 change from 
   dockerfilePath: '**/Dockerfile' to Shopping/Shopping.API/Dockerfile and Shopping/Shopping.Client/Dockerfile
 
+Push to git
+It will not trigger the pipeline as those files are not mentioned in the included folder.
+Change in Home\index.cshtml
+
