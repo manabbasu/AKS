@@ -1,0 +1,173 @@
+Good Source: https://thenewstack.io/kubernetes-deployments-work/
+https://medium.com/aspnetrun/deploying-microservices-on-kubernetes-35296d369fdb
+
+What is Docker -
+Docker is an open source platform for developing, shipping and running applications. Docker provides you to seperate your application from your infrastructure, so you can develop software quickly. It helps to reduce time between developing and shipping code quickly in production. Docker container runs natively in windows and linux machine. A docker container image is a lightweight standard executable package of software that includes everyrithng needed to run your application.
+
+What is Kubernetes
+Its an open-source container orchestration platform. Its use for deploying, managing and scaling containerized applications.
+
+Kubernetes architecture:
+
+Cluster is the Central component of k8s .
+Cluster contains many nodes.
+Each nodes host group one or more containers which contans many applications. Each node has its own environment and could have physical or virtual machine.Node has pod, kubectl-proxy, kubectl.
+
+PoDs are smallest deloyable unit of computing. A POD is a group of one or more containers which share storage or network resources.POD store and manage our docker containes.
+
+Replica set: Purpose is maintain a stable set of Replica pods running on any given time.
+
+Deployment: Provides to decorate you updates pods and the replica set. You can mention desired set in a replica set. Its an abstraction of the replica set.
+
+Service: Abstract way to expose and application running on a setup to PODs as a network service.
+
+Config Map: As an API object used to Store non confidential data in a keyvalue pair. Pods contains config map.
+
+Kubernet Secrets: To store sensible data
+
+Deployment>Replica Set>POD>Node
+
+How to install Kubernets in docker for windows ?
+In docker for windows, select the checkbox "Enable Kubernets"
+
+
+Flow:
+Dockerfile->Build->Image->Docker Cotainer
+
+Add docker file: In VS Right click on Project->Add Docker Support->Target os Linus
+
+Docker Commands-
+VS IDE->Select Project-> right click->Open in terminal->Developer powershell
+**************************************Push image to docker hub**************************************
+>docker images : To See all the images
+>docker rmi dc : remove image where dc is the first 2 character of the image id
+>docker rmi dc -f: Remove forcefully
+
+>docker ps : To check the running container
+>docker stop ab: to stop running container where ab is the first 2 characters of container id
+>docker ps -a : To check the waiting containers.
+
+>>Release+ Docker: In order to change image tage to latest, select release mode and docker image. So it will be ready for the deployment cycle
+----------------------Underlying command of VS docker run----------------------
+>docker build -t shopping . : To create image from docker file by command where shopping is image name and . indicates we have docker file in the root path. If it doesn't work due to the incorrect automated path prepared by VS, right click the docker file and build image.
+>docker run -d -o 8080:80 --name myapp shoppingclient: To create container from image manually(Without VS Run). shoppingclient is image name. 8080 is the port number where it will run. myapp is the application name. After that command if you run docker ps, the names will be shown as myapp. Try in browser localhost:8080
+-------------------------------------------------------------------------------
+
+>docker : To see all the images
+
+--------------Push to Docker Container Regstry
+Create a Public Repo(shoppingapp) in docker hub. Its mandatory that the local images should have tag(latest), before pushing it to dockerhub. Otherwise check above >>Release+ Docker
+
+>docker login : To login to docker hub
+>docker images
+>docker tag 9c7 manabbasu/shoppingapp : To create a new tag to be pushed to dockerhub with the name manabbasu/shoppingapp, tag latest. manabbasu/shoppingapp is repo name, 9c7 is the image id
+>docker images
+>docker push manabbasu/shoppingapp:latest : To push the image manabbasu/shoppingapp into docker hub
+
+WHAT WE HAVE DONE SO FAR
+Add docker file
+Create docker image
+Running container
+Release+ Docker for latest image
+Create a repo in docker hub
+create a new image for docker hub
+push the image
+
+Integrate docker hub with Github and automated build(CI):
+Dockerhub->Repo->Builds->Link to Github. In dockerhub mention dockerfile location(Shopping/Shopping.Client/Dockerfile) and set autobuild=true. Ideally the docker file should be in the root folder of the solution.
+**************************************END  image to docker hub**************************************
+
+**************************************Integrate Azure Web app with docker hub**************************************
+Create Web app for containers, Under Docker Tab, Options= Single Container, Publish=Docker Container, Image Source= Docker Hub, image and tag=manabbasu/shoppingapp
+
+CD:
+Go to that web app->Container Setting->Continious Deploument= On, copy the web hook URL
+In the dockerhub-> Repo-> Webhooks Tab-> Create a new web hook with that URL and name could be anything like azure
+**************************************End of Azure Web App Integration**************************************
+
+**************************************Download and Run Mongo**************************************
+Run Docker for windows.
+In the windows command prompt
+>docker pull mongo : To pull the mongo image
+>docker images
+>docker run -d -p 27017:27017 --name shopping-mongo mongo : To run mongo container. mongo is the image name, shopping-mongo is the container name
+>docker ps
+>docker logs -f shopping-mongo : For troubleshooting
+>docker exec -it shopping-mongo /bin/bash : To run interactive terminal
+
+In the API project, install nuger package MongoDB.Driver
+
+**************************************************************************************************
+
+**************************************Add docker for API Application- Docker Compose**************************************
+Right click API project->Add container Orchestrator Support : Since we now need multiple dockeer file. It will add a new project for docker compose and add docker file in api project.
+Right click Client project->Add container Orchestrator Support : To make entry in the existing docker compose file
+Make a manual entry for Mongo DB in docker compose file
+Modify docker compose override file for mongo db image, api project and client project
+>docker ps
+>docker-compose -f docker-compose.yml -f docker-compose.override.yml down : To stop all running container generated by docker compose
+>docker ps
+>docker images
+
+>docker-compose up
+>docker-compose -f docker-compose.yaml -f docker-compose-infrastructure.yaml up --build
+
+
+**************************************************************************************************
+
+**************************************KUBECTL Commands**************************************
+Docker Desktop->right click->Kubernetes-> Context=docker-desktop
+>kubectl : Get all commands
+>kubectl get all : to get pod, services and deployments, replicaset
+>kubectl --help : Get all commands
+>kubectl version : get version
+>kubectl cluster-info : To get cluster info where master and DNS is running
+>kubectl get nodes : to get nodes= docker-desktop
+>kubectl get pod : to get pod = shoppingapi-deployment, shoppingclient deployment
+>kubectl get services : to get services = mongo-service, shoppingapi-service, shoppingclient-service
+>kubectl get deployments : to get all deployments
+>kubectl delete deployment mongo-deployment : to delete deployment where mongo-deployment is deployments
+>kubectl get all : after deleting deployment, it will show empty replicaset, pod
+>kubectl delete service mongo-service : to delete service where mongo-service is a service name
+
+-------------------Imperative Way-------------
+>kubetl run swn-nginx --image=nginx: Download image and create Pod
+>kubectl get all : To check pod is running
+>kubectl port-forward swn-nginx 8080:80 : to forward port at localhost:8080
+>kubectl get pods
+>kubectl delete pod swn-nginx : to delete pod
+>kubectl get pod --watch : to see running pods
+
+>kubectl create : to see all options
+>kubectl create deployment nginx-deployment --image=nginx : to create deployment
+>kubectl get all : now it will show deployment, replicaset and pod
+>kubectl get deployment
+>kubectl get replicaset
+>kubectl get pod
+
+>kubectl edit deployment nginx-deployment : Open the manifest file in notepad, change the replicaset from 1 to 2.
+>kubectl get pod : It will now show 2 pods after edit the above file
+
+Troubleshhoting commands
+>kubectl logs <podname> : to check log of the pod
+>kubectl describe pod <podname> : pod descriptionlike start time, events
+>kubectl exec <podname> -it sh : open pod interactive mode, after that type command like mongo for mongo commands, then type show dbs etc.
+
+-------------------Declarative Way-------------
+>kubectl apply -f abcd.yaml
+>kubectl describe
+>kubectl exec
+>kubectl delete -f abcd.yaml
+>kubectl logs <podname> : to check log of the pod
+
+>kubectl apply -f abcd.yaml
+>kubectl get deployment
+>kubectl get deployment nginx-depl -o yaml : to check the deployment file which has been created from abcd.yaml file using apply command
+
+Steps : Create 2 yaml file deployment and service yaml and then kubectl apply
+
+**************************************************************************************************
+
+
+
+
